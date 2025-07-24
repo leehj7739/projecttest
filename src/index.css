@@ -1,0 +1,62 @@
+:root {
+  --color-primary: #2563eb;
+  --color-accent: #22d3ee;
+  --color-bg: #f6f6f6;
+  --color-surface: #fff;
+  --color-text: #18181b;
+  --color-border: #e5e7eb;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --font-main: "Inter", sans-serif;
+  --radius: 0.75rem;
+  --shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+}
+
+body.light {
+  --color-primary: #2563eb;
+  --color-accent: #22d3ee;
+  --color-bg: #f6f6f6;
+  --color-surface: #fff;
+  --color-text: #18181b;
+  --color-border: #e5e7eb;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+}
+
+body.dark {
+  --color-primary: #18181b;
+  --color-accent: #22d3ee;
+  --color-bg: #18181b;
+  --color-surface: #232326;
+  --color-text: #f6f6f6;
+  --color-border: #232326;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+}
+
+body.ocean {
+  --color-primary: #0ea5e9;
+  --color-accent: #38bdf8;
+  --color-bg: #e0f2fe;
+  --color-surface: #bae6fd;
+  --color-text: #0c4a6e;
+  --color-border: #7dd3fc;
+  --color-success: #22d3ee;
+  --color-error: #ef4444;
+}
+
+.theme-bg {
+  background-color: var(--color-bg);
+}
+.theme-text {
+  color: var(--color-text);
+}
+.theme-accent {
+  color: var(--color-accent);
+}
+.theme-primary {
+  color: var(--color-primary);
+}
+.theme-card {
+  background-color: var(--color-surface);
+}
