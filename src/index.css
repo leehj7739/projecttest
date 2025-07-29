@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --color-primary: #2563eb;
   --color-accent: #22d3ee;
@@ -43,6 +45,17 @@ body.ocean {
   --color-border: #7dd3fc;
   --color-success: #22d3ee;
   --color-error: #ef4444;
+}
+
+body.outline {
+  --color-primary: #000;
+  --color-accent: #000;
+  --color-bg: #fff;
+  --color-surface: #fff;
+  --color-text: #000;
+  --color-border: #000;
+  --color-success: #000;
+  --color-error: #000;
 }
 
 .theme-bg {
