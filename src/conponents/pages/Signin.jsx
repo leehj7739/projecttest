@@ -1,85 +1,214 @@
-import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useThemeStore } from '../../store/themeStore';
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FormInput from '../forms/FormInput';
 import FormButton from '../forms/FormButton';
-import SocialLoginButton from '../forms/SocialLoginButton';
+import SuccessModal from '../ui/SuccessModal';
+import ErrorModal from '../ui/ErrorModal';
+import { useAuth } from '../../hooks/useAuth';
+import { useDevModeStore } from '../../store/devModeStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function Signin() {
     const navigate = useNavigate();
-    const theme = useThemeStore(state => state.theme);
+    const location = useLocation();
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        id: '',
+        password: ''
+    });
 
-    // zustand theme 변경 시 body 클래스 동기화
-    useEffect(() => {
-        document.body.classList.remove('light', 'dark', 'ocean', 'outline');
-        document.body.classList.add(theme);
-    }, [theme]);
+    const { login, updateUser } = useAuth();
+    const isDevMode = useDevModeStore(state => state.isDevMode);
 
-    const handleSubmit = (e) => {
+    // 리다이렉트된 페이지 정보 가져오기
+    const from = location.state?.from?.pathname || '/dashboard';
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        navigate('/dashboard');
+        setIsLoading(true);
+
+        if (isDevMode) {
+            // 개발 모드: 더미 데이터로 로그인
+            setTimeout(() => {
+                setIsLoading(false);
+
+                // admin 계정 검증
+                if (formData.id === 'admin' && formData.password === '12345678') {
+                    // admin 계정으로 로그인 성공
+                    const adminUser = {
+                        id: 1,
+                        name: 'dummyname',
+                        email: 'admin@dev.com',
+                        roles: ['admin', 'user'],
+                        permissions: ['manage_apps', 'view_billing', 'manage_users', 'admin_access'],
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString()
+                    };
+
+                    const dummyToken = 'dev_token_admin_' + Date.now();
+
+                    // 전역 상태에 admin 사용자 정보 저장
+                    updateUser(adminUser);
+
+                    // localStorage에 토큰 저장 (개발 모드용)
+                    localStorage.setItem('authToken', dummyToken);
+
+                    // authStore 상태 직접 업데이트
+                    useAuthStore.setState({
+                        user: adminUser,
+                        token: dummyToken,
+                        isAuthenticated: true,
+                        isLoading: false,
+                        error: null,
+                        lastActivity: new Date().toISOString(),
+                    });
+
+                    setIsSuccessModalOpen(true);
+                } else {
+                    // 일반 사용자 계정 (기존 로직)
+                    const random = Math.random();
+                    if (random < 0.8) { // 80% 성공 확률
+                        // 개발 모드에서 더미 사용자 정보 생성
+                        const dummyUser = {
+                            id: 2,
+                            name: formData.id || '개발자',
+                            email: `${formData.id}@dev.com`,
+                            roles: ['user'],
+                            permissions: ['manage_apps', 'view_billing'],
+                            createdAt: new Date().toISOString(),
+                            lastLogin: new Date().toISOString()
+                        };
+
+                        const dummyToken = 'dev_token_' + Date.now();
+
+                        // 전역 상태에 더미 사용자 정보 저장
+                        updateUser(dummyUser);
+
+                        // localStorage에 토큰 저장 (개발 모드용)
+                        localStorage.setItem('authToken', dummyToken);
+
+                        // authStore 상태 직접 업데이트
+                        useAuthStore.setState({
+                            user: dummyUser,
+                            token: dummyToken,
+                            isAuthenticated: true,
+                            isLoading: false,
+                            error: null,
+                            lastActivity: new Date().toISOString(),
+                        });
+
+                        setIsSuccessModalOpen(true);
+                    } else {
+                        setIsErrorModalOpen(true);
+                    }
+                }
+            }, 1000);
+        } else {
+            // 일반 모드: 실제 API 호출
+            try {
+                const result = await login(formData);
+                if (result.success) {
+                    setIsSuccessModalOpen(true);
+                } else {
+                    setIsErrorModalOpen(true);
+                }
+            } catch {
+                setIsErrorModalOpen(true);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    };
+
+    const handleSuccess = () => {
+        setIsSuccessModalOpen(false);
+        navigate(from, { replace: true });
+    };
+
+    const handleRetry = () => {
+        setIsErrorModalOpen(false);
+        // 재시도 로직
+    };
+
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
 
     return (
         <div className="min-h-screen theme-bg flex flex-col justify-center items-center py-8">
-            {/* 로고 */}
-            <div className="mb-6">
-                <img src="https://assets-global.website-files.com/63f5c1b7b2b0b2b2b2b0b2b2/63f5c1b7b2b0b2b2b2b0b2b2_cursor-logo.png" alt="Cursor Logo" className="w-12 h-12 mx-auto" />
-            </div>
+            {/* Scratcha 로고 */}
+            <Link
+                to="/"
+                className="mb-6 px-4 py-2 rounded-lg hover:bg-[var(--color-bg)] transition-colors duration-200 inline-block"
+            >
+                <img
+                    src="/scratchalogo.png"
+                    alt="Scratcha"
+                    className="h-16 w-auto mx-auto"
+                />
+            </Link>
+
+            {/* 개발 모드 표시 */}
+            {isDevMode && (
+                <div className="mb-4 px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium">
+                    🔧 개발 모드: 더미 데이터로 로그인합니다
+                </div>
+            )}
+
+            {/* 개발 모드 계정 정보 */}
+            {isDevMode && (
+                <div className="mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="text-sm font-semibold text-blue-800 mb-2">개발용 계정 정보:</h3>
+                    <div className="text-xs text-blue-700 space-y-1">
+                        <div><strong>Admin 계정:</strong> ID: admin, PW: 12345678, Name: dummyname</div>
+                        <div><strong>권한:</strong> admin, user 역할 + 모든 권한</div>
+                        <div><strong>일반 계정:</strong> 아무 ID/PW 입력 (80% 성공 확률)</div>
+                    </div>
+                </div>
+            )}
+
+            {/* 보안 경고 메시지 */}
+            {location.state?.from && (
+                <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 className="text-sm font-semibold text-red-800 mb-1">🔒 보안 알림</h3>
+                    <p className="text-xs text-red-700">
+                        대시보드에 접근하려면 로그인이 필요합니다.
+                    </p>
+                </div>
+            )}
+
             {/* 카드 */}
             <div className="theme-card rounded-2xl shadow-xl w-full max-w-md p-8 flex flex-col gap-6 border border-[var(--color-border)]">
                 <h2 className="text-2xl font-bold theme-text text-center mb-2">Sign in</h2>
+
                 <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
                     <FormInput
-                        id="email"
-                        type="email"
-                        label="Email"
-                        placeholder="Your email address"
+                        id="id"
+                        type="text"
+                        label="아이디"
+                        placeholder="아이디를 입력하세요"
+                        value={formData.id}
+                        onChange={(e) => handleInputChange('id', e.target.value)}
+                        required
                     />
-                    <FormButton type="submit" className="mt-2">
-                        Continue
+                    <FormInput
+                        id="password"
+                        type="password"
+                        label="비밀번호"
+                        placeholder="비밀번호를 입력하세요"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        required
+                    />
+                    <FormButton type="submit" className="mt-2" disabled={isLoading}>
+                        {isLoading ? '로그인 중...' : '로그인'}
                     </FormButton>
                 </form>
-                <div className="flex items-center gap-2 text-[var(--color-text)]/50 text-xs my-2">
-                    <div className="flex-1 h-px bg-[var(--color-border)]" />
-                    <span>OR</span>
-                    <div className="flex-1 h-px bg-[var(--color-border)]" />
-                </div>
-                <div className="flex flex-col gap-3">
-                    <SocialLoginButton
-                        icon={
-                            <svg className="w-5 h-5" viewBox="0 0 48 48">
-                                <g>
-                                    <circle fill="#fff" cx="24" cy="24" r="24" />
-                                    <path d="M44.5 20H24v8.5h11.7C34.7 33.1 29.8 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l6-6C34.5 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11.1 0 20-8.9 20-20 0-1.3-.1-2.7-.3-4z" fill="#fbbc05" />
-                                    <path d="M6.3 14.7l7 5.1C15.5 16.1 19.4 13 24 13c3.1 0 5.9 1.2 8 3.1l6-6C34.5 6.5 29.6 4 24 4c-7.7 0-14.2 4.3-17.7 10.7z" fill="#ea4335" />
-                                    <path d="M24 44c5.8 0 10.7-1.9 14.6-5.1l-6.7-5.5C29.7 35.7 26.9 37 24 37c-5.7 0-10.6-3.7-12.3-8.8l-7 5.4C9.7 41.1 16.3 44 24 44z" fill="#34a853" />
-                                    <path d="M44.5 20H24v8.5h11.7c-1.1 2.9-3.3 5.2-6.2 6.6l.1.1 7 5.5c-2.1 2-4.8 3.3-7.8 3.3-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l6-6C34.5 6.5 29.6 4 24 4c-7.7 0-14.2 4.3-17.7 10.7z" fill="#4285f4" />
-                                </g>
-                            </svg>
-                        }
-                    >
-                        Continue with Google
-                    </SocialLoginButton>
-                    <SocialLoginButton
-                        icon={
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.62-3.37-1.36-3.37-1.36-.45-1.18-1.1-1.5-1.1-1.5-.9-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05A9.38 9.38 0 0 1 12 6.84c.85.004 1.71.12 2.51.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.07.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.58.69.48A10.01 10.01 0 0 0 22 12.26C22 6.58 17.52 2 12 2z" />
-                            </svg>
-                        }
-                    >
-                        Continue with GitHub
-                    </SocialLoginButton>
-                    <SocialLoginButton
-                        icon={
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M16.365 1.43c-.36-.36-.86-.56-1.37-.56-.51 0-1.01.2-1.37.56l-1.62 1.62c-.36.36-.56.86-.56 1.37 0 .51.2 1.01.56 1.37l1.62 1.62c.36.36.86.56 1.37.56.51 0 1.01-.2 1.37-.56l1.62-1.62c.36-.36.56-.86.56-1.37 0-.51-.2-1.01-.56-1.37l-1.62-1.62zm-4.95 4.95c-.36-.36-.86-.56-1.37-.56-.51 0-1.01.2-1.37.56l-1.62 1.62c-.36.36-.56.86-.56 1.37 0 .51.2 1.01.56 1.37l1.62 1.62c.36.36.86.56 1.37.56.51 0 1.01-.2 1.37-.56l1.62-1.62c.36-.36.56-.86.56-1.37 0-.51-.2-1.01-.56-1.37l-1.62-1.62zm-4.95 4.95c-.36-.36-.86-.56-1.37-.56-.51 0-1.01.2-1.37.56l-1.62 1.62c-.36.36-.56.86-.56 1.37 0 .51.2 1.01.56 1.37l1.62 1.62c.36.36.86.56 1.37.56.51 0 1.01-.2 1.37-.56l1.62-1.62c.36-.36.56-.86.56-1.37 0-.51-.2-1.01-.56-1.37l-1.62-1.62z" />
-                            </svg>
-                        }
-                    >
-                        Continue with Apple
-                    </SocialLoginButton>
-                </div>
                 <div className="text-center text-[var(--color-text)]/60 text-sm mt-2">
                     Don&apos;t have an account? <Link to="/signup" className="theme-accent hover:underline">Sign up</Link>
                 </div>
@@ -88,6 +217,23 @@ export default function Signin() {
             <div className="mt-10 text-center text-[var(--color-text)]/60 text-sm">
                 <Link to="#" className="hover:underline">Terms of Service</Link> and <Link to="#" className="hover:underline">Privacy Policy</Link>
             </div>
+
+            <SuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={handleSuccess}
+                title="로그인 성공!"
+                message={isDevMode
+                    ? "개발 모드로 로그인되었습니다. 더미 데이터를 사용합니다."
+                    : "로그인이 완료되었습니다. 대시보드로 이동합니다."
+                }
+            />
+            <ErrorModal
+                isOpen={isErrorModalOpen}
+                onClose={() => setIsErrorModalOpen(false)}
+                title="로그인 실패"
+                message="아이디 또는 비밀번호가 올바르지 않습니다. 다시 시도해주세요."
+                onRetry={handleRetry}
+            />
         </div>
     );
 } 

@@ -1,117 +1,199 @@
-import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
-import Chart from '../dashboard/Chart';
-
-const data = [
-    { name: '1월', value: 400 },
-    { name: '2월', value: 300 },
-    { name: '3월', value: 200 },
-    { name: '4월', value: 278 },
-    { name: '5월', value: 189 },
-    { name: '6월', value: 239 },
-];
+import React from 'react';
+import DashboardLayout from '../dashboard/DashboardLayout';
+import Chart from '../ui/Chart';
+import LoadingSpinner from '../ui/LoadingSpinner';
+import ActivityIcon from '../ui/ActivityIcon';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from '../../utils/chartImports';
+import { useDashboardStore } from '../../store/dashboardStore';
 
 export default function DashboardOverview() {
-    const [selectedPeriod, setSelectedPeriod] = useState('6개월');
+    const {
+        selectedPeriod,
+        usageData,
+        stats,
+        isLoading,
+        currentPlan,
+        recentActivities,
+        setPeriod,
+        calculateOverageCost,
+        calculateTotalCost
+    } = useDashboardStore();
+
+    // 기간 선택 옵션
+    const periodOptions = ['전체', '1일', '7일', '30일'];
+
+    // 초과분 요금 계산
+    const overageCost = calculateOverageCost(currentPlan.used, currentPlan.limit, currentPlan.overageRate);
+    const totalCost = calculateTotalCost(currentPlan.used, currentPlan.limit, currentPlan.price, currentPlan.overageRate);
+
+    // 활동 타입별 배경색
+    const getActivityColor = (type) => {
+        switch (type) {
+            case 'success': return 'bg-green-500';
+            case 'info': return 'bg-blue-500';
+            case 'warning': return 'bg-purple-500';
+            case 'error': return 'bg-red-500';
+            default: return 'bg-gray-500';
+        }
+    };
 
     return (
-        <div className="space-y-6">
-            {/* 헤더 */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Overview</h1>
-                    <p className="text-gray-400">스크래치 캡차 사용 현황을 확인하세요</p>
-                </div>
-                <select
-                    value={selectedPeriod}
-                    onChange={(e) => setSelectedPeriod(e.target.value)}
-                    className="bg-[#232326] border border-gray-700 text-white px-3 py-2 rounded"
-                >
-                    <option>1개월</option>
-                    <option>3개월</option>
-                    <option>6개월</option>
-                    <option>1년</option>
-                </select>
-            </div>
-
-            {/* 통계 카드들 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-[#232326] p-6 rounded-lg">
+        <DashboardLayout
+            title="대시보드 개요"
+            subtitle="현재 플랜과 사용량을 확인하세요"
+        >
+            <div className="space-y-6">
+                {/* 현재 요금제 */}
+                <div className="theme-card p-6 rounded-lg border border-[var(--color-border)]">
+                    <h3 className="text-lg font-semibold theme-text mb-4">현재 요금제</h3>
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-gray-400 text-sm">총 요청 수</p>
-                            <p className="text-2xl font-bold text-white">12,847</p>
+                            <p className="text-2xl font-bold theme-text">{currentPlan.name}</p>
+                            <p className="theme-text/60">{currentPlan.description}</p>
+                            <p className="text-sm theme-text/60 mt-1">{currentPlan.price}</p>
+                            {overageCost > 0 && (
+                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm">
+                                    <p className="text-red-700 font-medium">초과분 요금: ₩{overageCost.toLocaleString()}</p>
+                                    <p className="text-red-600 text-xs">
+                                        초과 사용량: {currentPlan.used - currentPlan.limit}회 × ₩{currentPlan.overageRate}/회
+                                    </p>
+                                </div>
+                            )}
                         </div>
-                        <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
+                        <div className="text-right">
+                            <p className="text-sm theme-text/60">사용량</p>
+                            <p className="text-2xl font-bold theme-accent">{currentPlan.used.toLocaleString()}</p>
+                            <p className="text-sm theme-text/60">/ {currentPlan.limit.toLocaleString()}회</p>
+                            {overageCost > 0 && (
+                                <p className="text-sm text-red-600 font-medium mt-1">
+                                    총 요금: ₩{totalCost.toLocaleString()}
+                                </p>
+                            )}
                         </div>
                     </div>
-                    <p className="text-green-400 text-sm mt-2">+12.5% from last month</p>
+                    <div className="mt-4 w-full bg-[var(--color-bg)] rounded-full h-2">
+                        <div
+                            className={`h-2 rounded-full transition-all duration-300 ${(currentPlan.used / currentPlan.limit) * 100 >= 90
+                                ? 'bg-red-500'
+                                : (currentPlan.used / currentPlan.limit) * 100 >= 70
+                                    ? 'bg-yellow-500'
+                                    : 'bg-[var(--color-accent)]'
+                                }`}
+                            style={{ width: `${Math.min((currentPlan.used / currentPlan.limit) * 100, 100)}%` }}
+                        ></div>
+                    </div>
                 </div>
 
-                <div className="bg-[#232326] p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-gray-400 text-sm">성공률</p>
-                            <p className="text-2xl font-bold text-white">98.2%</p>
+                {/* 전체 사용량 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="theme-card p-6 rounded-lg border border-[var(--color-border)]">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold theme-text">오늘 사용량</h3>
+                            <span className="text-sm theme-text/60">+{stats.today.change}%</span>
                         </div>
-                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
+                        <p className="text-3xl font-bold theme-accent">{stats.today.value.toLocaleString()}</p>
+                        <p className="text-sm theme-text/60">캡차 검증</p>
                     </div>
-                    <p className="text-green-400 text-sm mt-2">+2.1% from last month</p>
+
+                    <div className="theme-card p-6 rounded-lg border border-[var(--color-border)]">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold theme-text">이번 주</h3>
+                            <span className="text-sm theme-text/60">+{stats.week.change}%</span>
+                        </div>
+                        <p className="text-3xl font-bold theme-accent">{stats.week.value.toLocaleString()}</p>
+                        <p className="text-sm theme-text/60">캡차 검증</p>
+                    </div>
+
+                    <div className="theme-card p-6 rounded-lg border border-[var(--color-border)]">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold theme-text">이번 달</h3>
+                            <span className="text-sm theme-text/60">+{stats.month.change}%</span>
+                        </div>
+                        <p className="text-3xl font-bold theme-accent">{stats.month.value.toLocaleString()}</p>
+                        <p className="text-sm theme-text/60">캡차 검증</p>
+                    </div>
                 </div>
 
-                <div className="bg-[#232326] p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-gray-400 text-sm">평균 응답 시간</p>
-                            <p className="text-2xl font-bold text-white">1.2s</p>
-                        </div>
-                        <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                {/* 사용량 그래프 */}
+                <div className="theme-card p-6 rounded-lg border border-[var(--color-border)]">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-semibold theme-text">사용량 추이</h3>
+                        <div className="flex gap-2">
+                            {periodOptions.map((period) => (
+                                <button
+                                    key={period}
+                                    onClick={() => setPeriod(period)}
+                                    disabled={isLoading}
+                                    className={`px-3 py-1 rounded-lg text-sm font-medium transition ${selectedPeriod === period
+                                        ? 'bg-[var(--color-accent)] text-[var(--color-bg)]'
+                                        : 'border border-[var(--color-border)] theme-text hover:bg-[var(--color-bg)]'
+                                        } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {period}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                    <p className="text-red-400 text-sm mt-2">-0.3s from last month</p>
+
+                    <div className="h-80">
+                        {isLoading ? (
+                            <LoadingSpinner message="데이터를 불러오는 중..." className="h-full" />
+                        ) : (
+                            <Chart>
+                                <LineChart data={usageData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                                    <XAxis
+                                        dataKey="date"
+                                        stroke="var(--color-text)"
+                                        fontSize={12}
+                                    />
+                                    <YAxis
+                                        stroke="var(--color-text)"
+                                        fontSize={12}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'var(--color-surface)',
+                                            border: '1px solid var(--color-border)',
+                                            borderRadius: '8px',
+                                            color: 'var(--color-text)'
+                                        }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="usage"
+                                        stroke="var(--color-accent)"
+                                        strokeWidth={3}
+                                        dot={{ fill: 'var(--color-accent)', strokeWidth: 2, r: 4 }}
+                                        activeDot={{ r: 6, stroke: 'var(--color-accent)', strokeWidth: 2 }}
+                                    />
+                                </LineChart>
+                            </Chart>
+                        )}
+                    </div>
+                </div>
+
+                {/* 최근 활동 */}
+                <div className="theme-card p-6 rounded-lg border border-[var(--color-border)]">
+                    <h3 className="text-lg font-semibold theme-text mb-4">최근 활동</h3>
+                    <div className="space-y-3">
+                        {recentActivities.map((activity) => (
+                            <div key={activity.id} className="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getActivityColor(activity.type)}`}>
+                                        <ActivityIcon icon={activity.icon} />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium theme-text">{activity.title}</p>
+                                        <p className="text-sm theme-text/60">{activity.time}</p>
+                                    </div>
+                                </div>
+                                <span className="text-sm theme-text/60">{activity.count}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
-
-            {/* 차트 */}
-            <div className="bg-[#232326] p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-4">월별 요청 수</h3>
-                <Chart>
-                    <BarChart data={data}>
-                        <XAxis
-                            dataKey="name"
-                            stroke="#9CA3AF"
-                            fontSize={12}
-                        />
-                        <YAxis
-                            stroke="#9CA3AF"
-                            fontSize={12}
-                        />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: '#232326',
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                color: '#F9FAFB'
-                            }}
-                        />
-                        <Bar
-                            dataKey="value"
-                            fill="#3B82F6"
-                            radius={[4, 4, 0, 0]}
-                        />
-                    </BarChart>
-                </Chart>
-            </div>
-        </div>
+        </DashboardLayout>
     );
 } 

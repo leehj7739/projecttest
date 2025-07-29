@@ -4,16 +4,16 @@ import SocialLinks from './SocialLinks';
 
 export default function Footer() {
     return (
-        <footer className="w-full theme-card border-t border-[var(--color-card)] pt-12 pb-8 mt-12">
+        <footer className="w-full theme-bg pt-12 pb-8 mt-12">
             <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row md:justify-between gap-12">
                 {/* 좌측: 이메일, 소셜 */}
-                <div className="flex flex-col gap-4 min-w-[180px]">
+                <div className="flex flex-col gap-4 min-w-[180px] text-left">
                     <span className="font-medium theme-text">hi@cursor.com</span>
                     <SocialLinks />
                     <span className="text-xs theme-accent mt-4">© 2025 Made by <span className="font-semibold">Anysphere</span></span>
                 </div>
                 {/* 중앙: 카테고리별 링크 */}
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm text-left">
                     <div>
                         <div className="font-semibold theme-text mb-2">Product</div>
                         <ul className="space-y-1 theme-accent">

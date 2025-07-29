@@ -3,7 +3,7 @@ import React from 'react';
 export default function UserInfo() {
     return (
         <div className="mb-8">
-            <div className="font-semibold text-white">
+            <div className="font-semibold theme-text">
                 heejun lee
                 <span className="inline-block align-middle ml-1">
                     <svg className="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
@@ -11,7 +11,7 @@ export default function UserInfo() {
                     </svg>
                 </span>
             </div>
-            <div className="text-gray-400 text-sm">Pro · leehj7739@gmail.com</div>
+            <div className="theme-text/60 text-sm">Pro · leehj7739@gmail.com</div>
         </div>
     );
 } 
