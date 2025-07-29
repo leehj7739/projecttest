@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  scratcha-app:
+    build: .
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    # 볼륨 마운트 (개발 시 필요)
+    # volumes:
+    #   - ./logs:/var/log/nginx
